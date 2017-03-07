@@ -1374,9 +1374,6 @@ class Object(object):
 
     def start_frame(self):
         """
-        :param fps: Frames per second used to calculate the start frame
-        (default 24.0)
-
         :return: Start frame as float
         """
         try:
@@ -1386,11 +1383,8 @@ class Object(object):
         except AttributeError:
             return self.parent.start_frame()
 
-    def end_frame(self, fps=24):
+    def end_frame(self):
         """
-        :param fps: Frames per second used to calculate the end frame
-        (default 24.0)
-
         :return: Last frame as float
         """
         try:
