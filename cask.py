@@ -427,7 +427,7 @@ class DeepDict(dict):
 class Archive(object):
     """Archive I/O Object"""
 
-    def __init__(self, filepath=None, fps=24):
+    def __init__(self, filepath=None, fps=24.0):
         """Creates a new Archive class object.
 
         :param filepath: Path to Alembic archive file.
@@ -965,7 +965,7 @@ class Property(object):
         if time is not None:
             return ts.getNearIndex(float(time), numSamples)
         elif frame is not None:
-            return ts.getNearIndex((frame / self.archive().fps), numSamples)
+            return ts.getNearIndex((frame / float(self.archive().fps)), numSamples)
         else:
             return 0
 
