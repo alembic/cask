@@ -660,6 +660,10 @@ class Test1_Write(unittest.TestCase):
         qux = foo.properties["qux"] = cask.Property()
         quux = foo.properties["quux"] = cask.Property()
         garply = foo.properties["garply"] = cask.Property()
+        quatf = foo.properties["quatf"] = cask.Property()
+        quatf.metadata["interpretation"] = "quat"
+        quatd = foo.properties["quatd"] = cask.Property()
+        quatd.metadata["interpretation"] = "quat"
         waldo = foo.properties["waldo"] = cask.Property()
         fred = foo.properties["fred"] = cask.Property()
         color = foo.properties["color"] = cask.Property()
@@ -680,6 +684,8 @@ class Test1_Write(unittest.TestCase):
         qux.set_value(imath.Box3d())
         quux.set_value(imath.M33d())
         garply.set_value(imath.M44d())
+        quatf.set_value(imath.Quatf())
+        quatd.set_value(imath.Quatd())
         waldo.set_value(1)
         fred.set_value([1, 2, 3, 4])
         color.set_value(imath.Color3f(1, 2, 3))
@@ -698,6 +704,8 @@ class Test1_Write(unittest.TestCase):
         qux = foo.properties["qux"]
         quux = foo.properties["quux"]
         garply = foo.properties["garply"]
+        quatf = foo.properties["quatf"]
+        quatd = foo.properties["quatd"]
         waldo = foo.properties["waldo"]
         fred = foo.properties["fred"]
         color = foo.properties["color"]
@@ -720,6 +728,14 @@ class Test1_Write(unittest.TestCase):
         self.assertEqual(garply.extent(), 16)
         self.assertEqual(garply.pod(), alembic.Util.POD.kFloat64POD)
         self.assertEqual(garply.values[0], imath.M44d())
+        self.assertEqual(quatf.extent(), 4)
+        self.assertEqual(quatf.pod(), alembic.Util.POD.kFloat32POD)
+        self.assertEqual(quatf.values[0], imath.Quatf())
+        self.assertEqual(quatf.metadata["interpretation"], "quat")
+        self.assertEqual(quatd.extent(), 4)
+        self.assertEqual(quatd.pod(), alembic.Util.POD.kFloat64POD)
+        self.assertEqual(quatd.values[0], imath.Quatd())
+        self.assertEqual(quatd.metadata["interpretation"], "quat")
         self.assertEqual(waldo.extent(), 1)
         self.assertEqual(waldo.pod(), alembic.Util.POD.kInt32POD)
         self.assertEqual(waldo.values[0], 1)
