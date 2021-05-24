@@ -34,6 +34,7 @@
 #
 #-******************************************************************************
 
+from __future__ import print_function
 __doc__ = """
 Cask is a high level convenience wrapper for the Alembic Python API. It blurs
 the lines between Alembic "I" and "O" objects and properties, abstracting both
@@ -51,6 +52,8 @@ import ctypes
 import weakref
 import alembic
 from functools import wraps
+
+_string_types = (type(u""), type(b""))
 
 # maps cask objects to Alembic IObjects
 IOBJECTS = {
@@ -336,13 +339,13 @@ def get_pod_extent(prop):
     try:
         pod, extent = POD_EXTENT.get(type(value0))
     except TypeError as err:
-        print "Error getting pod, extent from", prop, value0
-        print err
+        print("Error getting pod, extent from", prop, value0)
+        print(err)
         return (alembic.Util.POD.kUnknownPOD, 1)
     if extent <= 0:
        extent = (len(value0)
             if prop.is_scalar() and
-            (type(value0) not in (str, unicode) and hasattr(value0, '__len__'))
+            (type(value0) not in _string_types and hasattr(value0, '__len__'))
             else 1
         )
     return (pod, extent)
@@ -505,7 +508,7 @@ class DeepDict(dict):
 
     def remove(self, key):
         """Removes an item if it exists."""
-        if key and self.has_key(key):
+        if key and key in self:
             self.pop(key)
 
 
@@ -913,7 +916,7 @@ class Property(object):
         old = self._name
         self._name = name
         if self._parent and hasattr(self._parent, "_prop_dict"):
-            if old and old in self.parent.properties.keys():
+            if old and old in self.parent.properties:
                 self._parent.properties.remove(old)
                 self._parent.properties[name] = self
 
@@ -1067,8 +1070,8 @@ class Property(object):
             for i in range(len(self.iobject.samples)):
                 try:
                     self._values.insert(i, self.iobject.samples[i])
-                except RuntimeError, err:
-                    print "Bad value on sample:", i, err
+                except RuntimeError as err:
+                    print("Bad value on sample:", i, err)
                     self._values.insert(i, str(err))
         return self._values
 
@@ -1150,9 +1153,9 @@ class Property(object):
                 try:
                     value = python_to_imath(value)
                     self.oobject.setValue(value)
-                except Exception, err:
-                    print "Error setting value on %s: %s %s\n%s" \
-                        % (self.name, value, self._klass, err)
+                except Exception as err:
+                    print("Error setting value on %s: %s %s\n%s" \
+                        % (self.name, value, self._klass, err))
                 del value
         else:
             for prop in self.properties.values():
@@ -1260,7 +1263,7 @@ class Object(object):
                     self._oobject = self._klass(self.parent.oobject, self.name,
                                             meta, self.time_sampling_id)
             else:
-                print "OObject class not found for: %s" % (self.name)
+                print("OObject class not found for: %s" % (self.name))
 
         return self._oobject
 
@@ -1318,7 +1321,7 @@ class Object(object):
         old = self._name
         self._name = name
         if self.parent and hasattr(self._parent, "_child_dict"):
-            if old and old in self._parent._child_dict.keys():
+            if old and old in self._parent._child_dict:
                 self._parent._child_dict.remove(old)
                 self._parent._child_dict[name] = self
 
@@ -1558,9 +1561,9 @@ class Object(object):
                     obj.getSchema().setCameraSample(sample)
                 else:
                     obj.getSchema().set(sample)
-            except AttributeError, err:
-                print "Error setting sample on %s: %s\n%s" \
-                    % (self.name, sample, err)
+            except AttributeError as err:
+                print("Error setting sample on %s: %s\n%s" \
+                    % (self.name, sample, err))
             del sample
         del obj
 
