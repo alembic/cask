@@ -47,6 +47,7 @@ __version__ = "1.2.0"
 
 import os
 import re
+import sys
 import imath
 import ctypes
 import weakref
@@ -412,7 +413,7 @@ def find_iter(obj, name=".*", types=None):
     """
     if re.match(name, obj.name) and (types is None or obj.type() in types):
         yield obj
-    for child in obj.children.values():
+    for child in _copiedvalues(obj.children):
         for grandchild in find_iter(child, name, types):
             yield grandchild
 
@@ -719,13 +720,13 @@ class Archive(object):
         """Closes this archive and makes it immutable."""
         def close_tree(obj):
             """recursive close"""
-            for child in obj.children.values():
+            for child in _copiedvalues(obj.children):
                 close_tree(child)
                 del child
             obj.close()
             del obj
 
-        for child in self.top.children.values():
+        for child in _copiedvalues(self.top.children):
             close_tree(child)
             del child
 
@@ -747,13 +748,13 @@ class Archive(object):
         def save_tree(obj):
             """recursive save"""
             obj.save()
-            for child in obj.children.values():
+            for child in _copiedvalues(obj.children):
                 save_tree(child)
                 child.close()
                 del child
             obj.close()
             del obj
-        for child in self.top.children.values():
+        for child in _copiedvalues(self.top.children):
             save_tree(child)
         self.top.close()
 
@@ -1139,7 +1140,7 @@ class Property(object):
         self._klass = None
         self._parent = None
         self._values = []
-        for prop in self.properties.values():
+        for prop in _copiedvalues(self.properties):
             prop.close()
 
     def save(self):
@@ -1158,7 +1159,7 @@ class Property(object):
                         % (self.name, value, self._klass, err))
                 del value
         else:
-            for prop in self.properties.values():
+            for prop in _copiedvalues(self.properties):
                 up = False
                 if not prop.iobject and not prop.object().iobject:
                     if prop.name == ".childBnds":
@@ -1537,7 +1538,7 @@ class Object(object):
         self._parent = None
         self._schema = None
         self.clear_all()
-        for prop in self.properties.values():
+        for prop in _copiedvalues(self.properties):
             prop.close()
             del prop
 
@@ -1545,7 +1546,7 @@ class Object(object):
         """Walks child and property sub-trees creating OObjects as necessary.
         """
         obj = self.oobject
-        for prop in self.properties.values():
+        for prop in _copiedvalues(self.properties):
             prop.save()
             prop.close()
             del prop
@@ -1689,3 +1690,13 @@ class Points(Object):
     _sample_class = alembic.AbcGeom.OPointsSchemaSample
     def __init__(self, *args, **kwargs):
         super(Points, self).__init__(*args, **kwargs)
+
+
+if sys.version[0] == "2":
+    def _copiedvalues(d):
+        """A copied list of dictionary values. (Python 2)"""
+        return d.values()
+else:
+    def _copiedvalues(d):
+        """A copied list of dictionary values. (Python 3)"""
+        return list(d.values())
