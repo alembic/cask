@@ -47,6 +47,7 @@ __version__ = "1.2.0"
 
 import os
 import re
+import sys
 import imath
 import ctypes
 import weakref
@@ -510,6 +511,16 @@ class DeepDict(dict):
         """Removes an item if it exists."""
         if key and key in self:
             self.pop(key)
+
+    if sys.version[0] != "2":
+        # Code in this module was written in the Python 2 style, where
+        # a dictionary's `values()` is an independent copy of all the data.
+        # Since Python 3, `values()` becomes a view, which raises
+        # `RuntimeError` if the dictionary is modified while iterating.
+        def values(self):
+            """Dictionary values copied into a list, to preserve Python 2 behavior"""
+            view = super(DeepDict, self).values()
+            return list(view)
 
 
 class Archive(object):

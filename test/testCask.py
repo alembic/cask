@@ -36,7 +36,6 @@
 
 import os
 import sys
-import string
 import unittest
 import tempfile
 
@@ -65,10 +64,10 @@ def set_float(schema, target, shaderType, paramName, value):
 
 def lights_out():
     filename = os.path.join(TEMPDIR, "cask_test_lights.abc")
-    if os.path.exists(filename) and cask.is_valid(filename):
-        return filename
-
-    os.system("rm -f %s" % filename)
+    if os.path.exists(filename):
+        if cask.is_valid(filename):
+            return filename
+        os.unlink(filename)
     archive = alembic.Abc.OArchive(filename)
     lightA = alembic.AbcGeom.OLight(archive.getTop(), "lightA")
     lightB = alembic.AbcGeom.OLight(archive.getTop(), "lightB")
@@ -168,12 +167,15 @@ def deep_out():
     if os.path.exists(filename) and cask.is_valid(filename):
         return filename
 
+    uppers = "ABCDEFGHIJKLMNOP"
+    lowers = uppers.lower()
+
     obj = alembic.Abc.OArchive(filename).getTop()
     for i in range(10):
-        obj = alembic.AbcGeom.OXform(obj, string.uppercase[i])
+        obj = alembic.AbcGeom.OXform(obj, uppers[i])
         p = obj.getProperties()
         for i in range(3):
-            p = alembic.Abc.OCompoundProperty(p, string.lowercase[i])
+            p = alembic.Abc.OCompoundProperty(p, lowers[i])
         p = alembic.Abc.OStringProperty(p, "myprop")
         p.setValue("foo")
 
@@ -190,7 +192,7 @@ class Test1_Write(unittest.TestCase):
         # create xform object named foo and make it a child of top
         f = a.top.children["foo"] = cask.Xform()
         self.assertEqual(len(a.top.children), 1)
-        self.assertEqual(a.top.children.values()[0].name, "foo")
+        self.assertEqual(_dictvalue(a.top.children).name, "foo")
 
         # create some simple properties
         b = f.properties["bar"] = cask.Property()
@@ -430,18 +432,18 @@ class Test1_Write(unittest.TestCase):
         # create a new object and property
         t.children["foo"] = cask.Xform()
         t.properties["some"] = cask.Property()
-        f = t.children.values()[0]
-        p = t.properties.values()[0]
+        f = _dictvalue(t.children)
+        p = _dictvalue(t.properties)
         self.assertEqual(f.name, "foo")
         self.assertEqual(p.name, "some")
 
         # rename them
         f.name = "bar"
         self.assertEqual(f.name, "bar")
-        self.assertEqual(t.children.values()[0].name, "bar")
+        self.assertEqual(_dictvalue(t.children).name, "bar")
         p.name = "thing"
         self.assertEqual(p.name, "thing")
-        self.assertEqual(t.properties.values()[0].name, "thing")
+        self.assertEqual(_dictvalue(t.properties).name, "thing")
 
         # test for accessor updates
         self.assertEqual(t.children["bar"], f)
@@ -477,7 +479,7 @@ class Test1_Write(unittest.TestCase):
         p = t.properties["prop"]
         p.name = "new"
         self.assertRaises(KeyError, t.properties.__getitem__, "prop")
-        self.assertEqual(t.properties.values()[0].name, "new")
+        self.assertEqual(_dictvalue(t.properties).name, "new")
         self.assertEqual(t.properties["new"], p)
 
         # another rename test
@@ -556,7 +558,7 @@ class Test1_Write(unittest.TestCase):
         self.assertRaises(KeyError, t.children.__getitem__, "A/B/C/Z")
 
         # property accessors
-        x = t.children.values()[0]
+        x = _dictvalue(t.children)
         self.assertEqual(x.name, "A")
         self.assertEqual(x.properties["a/b/c/myprop"].values[0], "foo")
 
@@ -819,12 +821,13 @@ class Test2_Read(unittest.TestCase):
 
         a = cask.Archive(filename)
         self.assertEqual(len(a.top.children), 1)
-        self.assertEqual(a.top.children.values()[0].name, "foo")
-        self.assertEqual(type(a.top.children.values()[0]), cask.Xform)
-        self.assertEqual(len(a.top.children.values()[0].properties), 3)
+        child = _dictvalue(a.top.children)
+        self.assertEqual(child.name, "foo")
+        self.assertEqual(type(child), cask.Xform)
+        self.assertEqual(len(child.properties), 3)
 
-        self.assertEqual(a.top.children.values()[0].properties["bar"].get_value(), "hello")
-        self.assertEqual(a.top.children.values()[0].properties["baz"].get_value(), 42.0)
+        self.assertEqual(child.properties["bar"].get_value(), "hello")
+        self.assertEqual(child.properties["baz"].get_value(), 42.0)
 
     def test_read_lights(self):
         filepath = lights_out()
@@ -953,7 +956,7 @@ class Test2_Read(unittest.TestCase):
 
         # open the archive
         a = cask.Archive(filename)
-        p = a.top.children.values()[0]
+        p = _dictvalue(a.top.children)
 
         # verify timesamplings were copied
         self.assertEqual(len(a.timesamplings), 1)
@@ -996,8 +999,8 @@ class Test2_Read(unittest.TestCase):
 
         # get the objects
         a = cask.Archive(filename)
-        x = a.top.children.values()[0]
-        p = x.children.values()[0]
+        x = _dictvalue(a.top.children)
+        p = _dictvalue(x.children)
 
         # verify the hierarchy
         self.assertEqual(x.name, "foo")
@@ -1006,7 +1009,7 @@ class Test2_Read(unittest.TestCase):
         self.assertEqual(type(p), cask.PolyMesh)
 
         # check one of the properties
-        vals = x.properties.values()[0].properties[".vals"]
+        vals = _dictvalue(x.properties).properties[".vals"]
         self.assertEqual(vals.values[0], imath.V3d(1, 2, 3))
 
     def test_verify_write_points(self):
@@ -1015,8 +1018,8 @@ class Test2_Read(unittest.TestCase):
 
         # get the objects
         a = cask.Archive(filename)
-        x = a.top.children.values()[0]
-        pts = x.children.values()[0]
+        x = _dictvalue(a.top.children)
+        pts = _dictvalue(x.children)
 
         # verify the hierarchy
         self.assertEqual(x.name, "points")
@@ -1058,8 +1061,8 @@ class Test2_Read(unittest.TestCase):
 
         # get some objects
         a = cask.Archive(filename)
-        r = a.top.children.values()[0]
-        m = r.children.values()[0]
+        r = _dictvalue(a.top.children)
+        m = _dictvalue(r.children)
 
         # verify re-parenting
         self.assertEqual(r.name, "root")
@@ -1179,7 +1182,7 @@ class Test3_Issues(unittest.TestCase):
 
         # access an object in the file, then close it
         a = cask.Archive(test_file_1)
-        self.assertEqual(a.top.children.keys(), ['meshy'])
+        self.assertEqual(list(a.top.children), ['meshy'])
         a.close()
 
         # try to write to the same file path
@@ -1362,8 +1365,8 @@ class Test3_Issues(unittest.TestCase):
         # read it back in and check for the user properties
         a = cask.Archive(test_file)
         x = a.top.children["x"]
-        self.assertEqual(x.properties.keys(), [".xform"])
-        self.assertEqual(x.properties[".xform"].properties.keys(), 
+        self.assertEqual(list(x.properties), [".xform"])
+        self.assertEqual(list(x.properties[".xform"].properties), 
             [".userProperties"])
         up = x.properties[".xform/.userProperties"]
 
@@ -1455,6 +1458,9 @@ class Test3_Issues(unittest.TestCase):
 
         a1.close()
 
+
+def _dictvalue(d):
+    return next(iter(d.values()))
 
 if __name__ == '__main__':
     unittest.main()
