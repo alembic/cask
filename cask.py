@@ -34,7 +34,7 @@
 #
 #-******************************************************************************
 
-from __future__ import print_function
+
 __doc__ = """
 Cask is a high level convenience wrapper for the Alembic Python API. It blurs
 the lines between Alembic "I" and "O" objects and properties, abstracting both
@@ -53,7 +53,7 @@ import weakref
 import alembic
 from functools import wraps
 
-_string_types = (type(u""), type(b""))
+_string_types = (type(""), type(b""))
 
 # maps cask objects to Alembic IObjects
 IOBJECTS = {
@@ -359,7 +359,7 @@ def wrapped(func):
     def with_wrapped_object(*args, **kwargs):
         """wraps internal alembic iobject"""
         iobj = args[0].iobject
-        for klass in IOBJECTS.values():
+        for klass in list(IOBJECTS.values()):
             if iobj and klass.matches(iobj.getMetaData()):
                 args[0].iobject = klass(iobj.getParent(), iobj.getName())
         return func(*args, **kwargs)
@@ -412,7 +412,7 @@ def find_iter(obj, name=".*", types=None):
     """
     if re.match(name, obj.name) and (types is None or obj.type() in types):
         yield obj
-    for child in obj.children.values():
+    for child in list(obj.children.values()):
         for grandchild in find_iter(child, name, types):
             yield grandchild
 
@@ -427,14 +427,14 @@ def copy(item, name=None):
         new_item._iobject = item._iobject
     new_item.time_sampling_id = item.time_sampling_id
     if type(item) in Object.__subclasses__():
-        for child in item.children.values():
+        for child in list(item.children.values()):
             new_item.children[child.name] = copy(child)
-        for prop in item.properties.values():
+        for prop in list(item.properties.values()):
             new_item.properties[prop.name] = copy(prop)
     elif type(item) == Property:
         if item.datatype:
             new_item.datatype = item.datatype
-        for prop in item.properties.values():
+        for prop in list(item.properties.values()):
             new_item.properties[prop.name] = copy(prop)
     return new_item
 
@@ -719,13 +719,13 @@ class Archive(object):
         """Closes this archive and makes it immutable."""
         def close_tree(obj):
             """recursive close"""
-            for child in obj.children.values():
+            for child in list(obj.children.values()):
                 close_tree(child)
                 del child
             obj.close()
             del obj
 
-        for child in self.top.children.values():
+        for child in list(self.top.children.values()):
             close_tree(child)
             del child
 
@@ -747,13 +747,13 @@ class Archive(object):
         def save_tree(obj):
             """recursive save"""
             obj.save()
-            for child in obj.children.values():
+            for child in list(obj.children.values()):
                 save_tree(child)
                 child.close()
                 del child
             obj.close()
             del obj
-        for child in self.top.children.values():
+        for child in list(self.top.children.values()):
             save_tree(child)
         self.top.close()
 
@@ -782,7 +782,7 @@ class Archive(object):
                     md = self.top.iobject.getMetaData()
                 else:
                     md = alembic.AbcCoreAbstract.MetaData()
-                for k, v in self.top.metadata.items():
+                for k, v in list(self.top.metadata.items()):
                     md.set(k, v)
                 self.oobject = alembic.Abc.CreateArchiveWithInfo(
                     filepath,
@@ -854,7 +854,7 @@ class Property(object):
                 meta = self.iobject.getMetaData()
             else:
                 meta = alembic.AbcCoreAbstract.MetaData()
-            for k, v in self.metadata.items():
+            for k, v in list(self.metadata.items()):
                 meta.set(k, v)
             if not self._klass:
                 self._klass = get_simple_oprop_class(self)
@@ -1139,7 +1139,7 @@ class Property(object):
         self._klass = None
         self._parent = None
         self._values = []
-        for prop in self.properties.values():
+        for prop in list(self.properties.values()):
             prop.close()
 
     def save(self):
@@ -1158,7 +1158,7 @@ class Property(object):
                         % (self.name, value, self._klass, err))
                 del value
         else:
-            for prop in self.properties.values():
+            for prop in list(self.properties.values()):
                 up = False
                 if not prop.iobject and not prop.object().iobject:
                     if prop.name == ".childBnds":
@@ -1251,7 +1251,7 @@ class Object(object):
             meta = self.iobject.getMetaData()
         else:
             meta = alembic.AbcCoreAbstract.MetaData()
-        for k, v in self.metadata.items():
+        for k, v in list(self.metadata.items()):
             meta.set(k, v)
         if self._oobject is None:
             if self.iobject:
@@ -1453,9 +1453,9 @@ class Object(object):
             """recursive check"""
             if not prop.is_compound() and not prop.iobject.isConstant():
                 self._is_animated = True
-            for child in prop.properties.values():
+            for child in list(prop.properties.values()):
                 _is_animated(child)
-        for prop in self.properties.values():
+        for prop in list(self.properties.values()):
             _is_animated(prop)
         return self._is_animated
 
@@ -1537,7 +1537,8 @@ class Object(object):
         self._parent = None
         self._schema = None
         self.clear_all()
-        for prop in self.properties.values():
+
+        for prop in list(self.properties.values()):
             prop.close()
             del prop
 
@@ -1545,7 +1546,7 @@ class Object(object):
         """Walks child and property sub-trees creating OObjects as necessary.
         """
         obj = self.oobject
-        for prop in self.properties.values():
+        for prop in list(self.properties.values()):
             prop.save()
             prop.close()
             del prop
